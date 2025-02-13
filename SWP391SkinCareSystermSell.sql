@@ -1,4 +1,4 @@
-﻿-- Create database
+-- Create database
 CREATE DATABASE SWP391SkinCareSellSysterm;
 GO
 
@@ -46,6 +46,7 @@ CREATE TABLE [dbo].[Orders] (
     [CustomerId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
     [TotalPrice] DECIMAL(18, 2) NOT NULL,
     [OrderStatus] NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Shipped, Delivered, Canceled
+    [PolicyId] INT NULL FOREIGN KEY REFERENCES [dbo].[CancellationPolicies](PolicyId),
     [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [UpdatedAt] DATETIME2 NULL
 );
@@ -120,7 +121,8 @@ CREATE TABLE [dbo].[FAQ] (
     [FaqId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [Question] NVARCHAR(MAX) NOT NULL,
     [Answer] NVARCHAR(MAX) NOT NULL,
-    [CreatedBy] NVARCHAR(450) NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId), -- Người tạo câu hỏi/ trả lời
+    [CreatedBy] NVARCHAR(450) NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
+    [CustomerId] NVARCHAR(450) NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
     [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE()
 );
 
@@ -183,7 +185,8 @@ CREATE TABLE [dbo].[InventoryLogs] (
     [QuantityChange] INT NOT NULL, -- Positive for stock-in, negative for stock-out
     [LogType] NVARCHAR(50) NOT NULL, -- Stock-In, Stock-Out
     [LogDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [Reason] NVARCHAR(MAX) NULL -- Optional reason for the inventory change
+    [Reason] NVARCHAR(MAX) NULL, -- Optional reason for the inventory change
+    [OrderId] INT NULL FOREIGN KEY REFERENCES [dbo].[Orders](OrderId)
 );
 
 CREATE TABLE [dbo].[PromotionApplications] (
@@ -227,6 +230,7 @@ CREATE TABLE [dbo].[CustomerPoints] (
     [PointId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [CustomerId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
     [Points] INT NOT NULL,
+    [OrderId] INT NULL FOREIGN KEY REFERENCES [dbo].[Orders](OrderId),
     [EarnedDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [RedeemedDate] DATETIME2 NULL -- Ngày điểm được sử dụng
 );
