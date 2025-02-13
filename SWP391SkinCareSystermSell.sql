@@ -29,6 +29,13 @@ CREATE TABLE [dbo].[Products] (
     [Status] NVARCHAR(50) NOT NULL DEFAULT 'Available' -- Available, OutOfStock, Discontinued
 );
 
+CREATE TABLE [dbo].[CancellationPolicies] (
+    [PolicyId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [PolicyName] NVARCHAR(255) NOT NULL,
+    [Description] NVARCHAR(MAX) NULL,
+    [ApplicableDays] INT NOT NULL -- Số ngày áp dụng chính sách (ví dụ: hủy trong vòng 7 ngày)
+);
+
 CREATE TABLE [dbo].[SkinTypes] (
     [SkinTypeId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [SkinType] NVARCHAR(50) NOT NULL -- Da dầu, Da hỗn hợp, Da khô, Da thường
@@ -46,7 +53,7 @@ CREATE TABLE [dbo].[Orders] (
     [CustomerId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
     [TotalPrice] DECIMAL(18, 2) NOT NULL,
     [OrderStatus] NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Shipped, Delivered, Canceled
-    [PolicyId] INT NULL FOREIGN KEY REFERENCES [dbo].[CancellationPolicies](PolicyId),
+    [PolicyId] INT NULL FOREIGN KEY REFERENCES [dbo].[CancellationPolicies](PolicyId), -- Kết nối với chính sách hủy
     [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [UpdatedAt] DATETIME2 NULL
 );
@@ -235,9 +242,3 @@ CREATE TABLE [dbo].[CustomerPoints] (
     [RedeemedDate] DATETIME2 NULL -- Ngày điểm được sử dụng
 );
 
-CREATE TABLE [dbo].[CancellationPolicies] (
-    [PolicyId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [PolicyName] NVARCHAR(255) NOT NULL,
-    [Description] NVARCHAR(MAX) NULL,
-    [ApplicableDays] INT NOT NULL -- Số ngày áp dụng chính sách (ví dụ: hủy trong vòng 7 ngày)
-);
