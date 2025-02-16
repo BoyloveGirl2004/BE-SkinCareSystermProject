@@ -13,6 +13,11 @@ CREATE TABLE [dbo].[Users] (
     [Email] NVARCHAR(255) NOT NULL UNIQUE,
     [PasswordHash] NVARCHAR(MAX) NOT NULL,
     [Role] NVARCHAR(50) NOT NULL CHECK (Role IN ('Customer', 'Staff', 'Manager')),
+    [Gender] NVARCHAR(10) NULL, -- Male, Female, Other
+    [DateOfBirth] DATE NULL,
+    [Address] NVARCHAR(MAX) NULL,
+    [PhoneNumber] NVARCHAR(20) NULL,
+    [ProfileImage] NVARCHAR(MAX) NULL, -- URL to user's profile image
     [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [Status] BIT NOT NULL DEFAULT 1 -- Active or Inactive
 );
@@ -139,6 +144,18 @@ CREATE TABLE [dbo].[PaymentDetails] (
     [PaymentMethod] NVARCHAR(50) NOT NULL, -- CreditCard, PayPal, BankTransfer, etc.
     [PaymentStatus] NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Completed, Failed
     [PaymentDate] DATETIME2 NULL
+);
+
+CREATE TABLE [dbo].[ShippingAddresses] (
+    [AddressId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [UserId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
+    [Address] NVARCHAR(MAX) NOT NULL, -- Địa chỉ cụ thể
+    [City] NVARCHAR(100) NOT NULL, -- Thành phố
+    [State] NVARCHAR(100) NULL, -- Tỉnh/Bang
+    [PostalCode] NVARCHAR(20) NOT NULL, -- Mã bưu chính
+    [Country] NVARCHAR(100) NOT NULL, -- Quốc gia
+    [PhoneNumber] NVARCHAR(20) NULL, -- Số điện thoại liên hệ cho địa chỉ
+    [IsDefault] BIT NOT NULL DEFAULT 0 -- Đánh dấu địa chỉ mặc định (1 = Default)
 );
 
 CREATE TABLE [dbo].[OrderHistory] (
