@@ -19,7 +19,7 @@ CREATE TABLE [dbo].[users] (
     [role] NVARCHAR(50) NOT NULL CHECK ([role] IN ('Customer', 'Staff', 'Manager')),
     [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [status] BIT NOT NULL DEFAULT 1, -- 1: Active, 0: Inactive
-    [gender] NVARCHAR(10) NULL, -- Male, Female, Other
+    [gender] NVARCHAR(10) NULL, -- Male, Female
     [date_of_birth] DATE NULL,
     [address] NVARCHAR(MAX) NULL,
     [phone_number] NVARCHAR(20) NULL,
@@ -61,6 +61,29 @@ CREATE TABLE [dbo].[skin_care_routines] (
     [step_number] INT NOT NULL CHECK ([step_number] > 0),
     [description] NVARCHAR(MAX) NOT NULL
 );
+
+CREATE TABLE [dbo].[skin_care_routine_skin_types] (
+    [routine_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_care_routines](routine_id),
+    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
+    PRIMARY KEY ([routine_id], [skin_type_id])
+);
+
+-- Bảng gợi ý sản phẩm sử dụng
+CREATE TABLE [dbo].[recommended_products] (
+    [product_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [product_name] NVARCHAR(255) NOT NULL,
+    [brand] NVARCHAR(100) NOT NULL,
+    [description] NVARCHAR(MAX),
+    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
+);
+
+-- Bảng tip chăm sóc da mặt
+CREATE TABLE [dbo].[skin_care_tips] (
+    [tip_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [tip_text] NVARCHAR(MAX) NOT NULL,
+    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
+);
+
 
 -- Bảng địa chỉ giao hàng (ShippingAddresses)
 CREATE TABLE [dbo].[shipping_addresses] (
