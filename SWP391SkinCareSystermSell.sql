@@ -57,7 +57,6 @@ CREATE TABLE [dbo].[skin_types] (
 -- Bảng quy trình chăm sóc da (SkinCareRoutines)
 CREATE TABLE [dbo].[skin_care_routines] (
     [routine_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
     [step_number] INT NOT NULL CHECK ([step_number] > 0),
     [description] NVARCHAR(MAX) NOT NULL
 );
@@ -224,19 +223,18 @@ CREATE TABLE [dbo].[skin_type_tests] (
 );
 
 -- Bảng câu hỏi kiểm tra loại da (TestQuestions)
-CREATE TABLE [dbo].[test_questions] (
-    [question_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [question_text] NVARCHAR(MAX) NOT NULL,
-    [question_type] NVARCHAR(50) NOT NULL DEFAULT 'Single Choice' -- Single Choice, Multiple Choice
-);
+--CREATE TABLE [dbo].[test_questions] (
+    --[question_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    --[question_text] NVARCHAR(MAX) NOT NULL,
+    --[question_type] NVARCHAR(50) NOT NULL DEFAULT 'Single Choice' -- Single Choice, Multiple Choice
+--);
 
 -- Bảng câu trả lời kiểm tra loại da (TestAnswers)
 CREATE TABLE [dbo].[test_answers] (
     [answer_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [question_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[test_questions](question_id),
     [answer_text] NVARCHAR(MAX) NOT NULL,
-    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D')),
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
+    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D'))
 );
 
 -- Bảng kết quả kiểm tra loại da (TestResults)
@@ -314,7 +312,8 @@ CREATE TABLE [dbo].[product_recommendations] (
     [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
     [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
     [routine_step] INT NOT NULL CHECK ([routine_step] > 0),
-    [recommendation_reason] NVARCHAR(255) NULL -- Best Seller, User Rating, etc.
+    [recommendation_reason] NVARCHAR(255) NULL,
+    CONSTRAINT UQ_Product_SkinType UNIQUE (skin_type_id, product_id, routine_step)
 );
 
 -- Bảng điểm thưởng khách hàng (CustomerPoints)
