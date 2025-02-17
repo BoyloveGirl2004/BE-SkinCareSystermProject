@@ -223,11 +223,11 @@ CREATE TABLE [dbo].[skin_type_tests] (
 );
 
 -- Bảng câu hỏi kiểm tra loại da (TestQuestions)
---CREATE TABLE [dbo].[test_questions] (
-    --[question_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    --[question_text] NVARCHAR(MAX) NOT NULL,
-    --[question_type] NVARCHAR(50) NOT NULL DEFAULT 'Single Choice' -- Single Choice, Multiple Choice
---);
+CREATE TABLE [dbo].[test_questions] (
+    [question_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [question_text] NVARCHAR(MAX) NOT NULL,
+    [question_type] NVARCHAR(50) NOT NULL DEFAULT 'Single Choice' -- Single Choice, Multiple Choice
+);
 
 -- Bảng câu trả lời kiểm tra loại da (TestAnswers)
 CREATE TABLE [dbo].[test_answers] (
