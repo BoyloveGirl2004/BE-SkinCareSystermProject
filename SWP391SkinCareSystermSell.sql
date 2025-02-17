@@ -62,6 +62,19 @@ CREATE TABLE [dbo].[SkinCareRoutines] (
     [Description] NVARCHAR(MAX) NOT NULL
 );
 
+-- Bảng ShippingAddresses (Thêm OrderId)
+CREATE TABLE [dbo].[ShippingAddresses] (
+    [AddressId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [UserId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
+    [Address] NVARCHAR(MAX) NOT NULL,
+    [City] NVARCHAR(100) NOT NULL,
+    [State] NVARCHAR(100) NULL,
+    [PostalCode] NVARCHAR(20) NOT NULL,
+    [Country] NVARCHAR(100) NOT NULL,
+    [PhoneNumber] NVARCHAR(20) NULL,
+    [IsDefault] BIT NOT NULL DEFAULT 0
+);
+
 -- Bảng Orders
 CREATE TABLE [dbo].[Orders] (
     [OrderId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -171,19 +184,6 @@ CREATE TABLE [dbo].[PaymentDetails] (
     [TransactionId] NVARCHAR(255) NULL
 );
 
--- Bảng ShippingAddresses (Thêm OrderId)
-CREATE TABLE [dbo].[ShippingAddresses] (
-    [AddressId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [UserId] NVARCHAR(450) NOT NULL FOREIGN KEY REFERENCES [dbo].[Users](UserId),
-    [Address] NVARCHAR(MAX) NOT NULL,
-    [City] NVARCHAR(100) NOT NULL,
-    [State] NVARCHAR(100) NULL,
-    [PostalCode] NVARCHAR(20) NOT NULL,
-    [Country] NVARCHAR(100) NOT NULL,
-    [PhoneNumber] NVARCHAR(20) NULL,
-    [IsDefault] BIT NOT NULL DEFAULT 0
-);
-
 -- Bảng lịch sử đơn hàng
 CREATE TABLE [dbo].[OrderHistory] (
     [OrderHistoryId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -268,13 +268,12 @@ CREATE TABLE [dbo].[ProductAttributes] (
     [AttributeValue] NVARCHAR(255) NOT NULL
 );
 
--- Bảng ProductImages
+-- Bảng ProductImages (Một sản phẩm có thể có nhiều ảnh)
 CREATE TABLE [dbo].[ProductImages] (
     [ImageId] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [ProductId] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[Products](ProductId),
     [ImageUrl] NVARCHAR(MAX) NOT NULL,
-    [IsMainImage] BIT NOT NULL DEFAULT 0,
-    CONSTRAINT CHK_MainImage UNIQUE (ProductId, IsMainImage) WHERE IsMainImage = 1
+    [IsMainImage] BIT NOT NULL DEFAULT 0
 );
 
 -- Bảng thông báo người dùng
@@ -306,4 +305,3 @@ CREATE TABLE [dbo].[CustomerPoints] (
     [EarnedDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [RedeemedDate] DATETIME2 NULL
 );
-
