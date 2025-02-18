@@ -57,6 +57,7 @@ CREATE TABLE [dbo].[skin_types] (
 -- Bảng quy trình chăm sóc da (SkinCareRoutines)
 CREATE TABLE [dbo].[skin_care_routines] (
     [routine_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
     [step_number] INT NOT NULL CHECK ([step_number] > 0),
     [description] NVARCHAR(MAX) NOT NULL
 );
@@ -102,9 +103,11 @@ CREATE TABLE [dbo].[orders] (
     [order_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [customer_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
     [total_price] DECIMAL(18, 2) NOT NULL CHECK ([total_price] >= 0),
-    [order_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+    [order_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending' 
+        CHECK ([order_status] IN ('Pending', 'Shipped', 'Delivered', 'Canceled')), -- Tránh trạng thái sai
     [policy_id] INT NULL FOREIGN KEY REFERENCES [dbo].[cancellation_policies](policy_id),
-    [shipping_address_id] INT NULL FOREIGN KEY REFERENCES [dbo].[shipping_addresses](address_id),
+    [shipping_address_id] INT NULL FOREIGN KEY REFERENCES [dbo].[shipping_addresses](address_id) 
+        ON DELETE SET NULL, -- Địa chỉ bị xóa sẽ đặt về NULL
     [discount_amount] DECIMAL(18,2) NOT NULL DEFAULT 0, 
     [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [updated_at] DATETIME2 NULL
@@ -113,7 +116,8 @@ CREATE TABLE [dbo].[orders] (
 -- Bảng chi tiết đơn hàng (OrderItems)
 CREATE TABLE [dbo].[order_items] (
     [order_item_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
+    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
+        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa luôn các sản phẩm liên quan
     [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
     [quantity] INT NOT NULL CHECK ([quantity] > 0),
     [unit_price] DECIMAL(18, 2) NOT NULL CHECK ([unit_price] >= 0),
@@ -198,9 +202,11 @@ CREATE TABLE [dbo].[faq] (
 -- Bảng chi tiết thanh toán (PaymentDetails)
 CREATE TABLE [dbo].[payment_details] (
     [payment_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
+    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
+        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa cả thông tin thanh toán
     [payment_method] NVARCHAR(50) NOT NULL,
-    [payment_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending',
+    [payment_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending' 
+        CHECK ([payment_status] IN ('Pending', 'Completed', 'Failed', 'Refunded')),
     [payment_date] DATETIME2 NULL,
     [transaction_id] NVARCHAR(255) NULL
 );
@@ -208,7 +214,8 @@ CREATE TABLE [dbo].[payment_details] (
 -- Bảng lịch sử đơn hàng (OrderHistory)
 CREATE TABLE [dbo].[order_history] (
     [order_history_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
+    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
+        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa lịch sử của đơn hàng đó
     [status] NVARCHAR(50) NOT NULL CHECK ([status] IN ('Pending', 'Shipped', 'Delivered', 'Canceled')),
     [note] NVARCHAR(MAX) NULL,
     [update_time] DATETIME2 NOT NULL DEFAULT GETDATE()
@@ -234,7 +241,8 @@ CREATE TABLE [dbo].[test_answers] (
     [answer_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [question_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[test_questions](question_id),
     [answer_text] NVARCHAR(MAX) NOT NULL,
-    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D'))
+    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D')),
+    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
 );
 
 -- Bảng kết quả kiểm tra loại da (TestResults)
@@ -312,8 +320,7 @@ CREATE TABLE [dbo].[product_recommendations] (
     [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
     [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
     [routine_step] INT NOT NULL CHECK ([routine_step] > 0),
-    [recommendation_reason] NVARCHAR(255) NULL,
-    CONSTRAINT UQ_Product_SkinType UNIQUE (skin_type_id, product_id, routine_step)
+    [recommendation_reason] NVARCHAR(255) NULL -- Best Seller, User Rating, etc.
 );
 
 -- Bảng điểm thưởng khách hàng (CustomerPoints)
