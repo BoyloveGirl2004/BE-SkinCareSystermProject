@@ -26,17 +26,6 @@ CREATE TABLE [dbo].[users] (
     [profile_image] NVARCHAR(MAX) NULL -- Đường dẫn ảnh đại diện
 );
 
--- Bảng chi tiết người dùng (Lưu thông tin đặc thù theo vai trò)
-CREATE TABLE user_details (
-    [user_id] BIGINT PRIMARY KEY FOREIGN KEY REFERENCES users(user_id),
-    [loyalty_points] INT NULL CHECK ([loyalty_points] >= 0), -- Dành cho Customer
-    [preferred_skin_type_id] INT NULL FOREIGN KEY REFERENCES skin_types(skin_type_id),
-    [hire_date] DATE NULL, -- Dành cho Staff
-    [salary] DECIMAL(18,2) NULL CHECK (salary >= 0), -- Dành cho Staff
-    [department] NVARCHAR(255) NULL -- Dành cho Manager
-);
-
-
 -- Bảng products (Quản lý sản phẩm)
 CREATE TABLE [dbo].[products] (
     [product_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -71,13 +60,37 @@ CREATE TABLE [dbo].[skin_care_tips] (
     [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
 );
 
--- Bảng hồ sơ khách hàng (CustomerProfiles)
-CREATE TABLE [dbo].[customer_profiles] (
-    [profile_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL UNIQUE FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [skin_type_id] INT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
+-- Bảng chi tiết người dùng (Lưu thông tin đặc thù theo vai trò)
+CREATE TABLE user_details (
+    [user_id] BIGINT PRIMARY KEY FOREIGN KEY REFERENCES users(user_id),
+    [loyalty_points] INT NULL CHECK ([loyalty_points] >= 0), -- Dành cho Customer
+    [preferred_skin_type_id] INT NULL FOREIGN KEY REFERENCES skin_types(skin_type_id),
+    [hire_date] DATE NULL, -- Dành cho Staff
+    [salary] DECIMAL(18,2) NULL CHECK (salary >= 0), -- Dành cho Staff
+    [department] NVARCHAR(255) NULL -- Dành cho Manager
 );
 
+-- Bảng chính sách hủy
+CREATE TABLE [dbo].[cancellation_policies] (
+    [policy_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [policy_name] NVARCHAR(255) NOT NULL,
+    [description] NVARCHAR(MAX) NULL,
+    [applicable_days] INT NOT NULL CHECK ([applicable_days] > 0), -- Số ngày áp dụng
+    [policy_type] NVARCHAR(50) NOT NULL DEFAULT 'Refund' -- Refund, Exchange, etc.
+);
+
+-- Bảng địa chỉ giao hàng (ShippingAddresses)
+CREATE TABLE [dbo].[shipping_addresses] (
+    [address_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
+    [address] NVARCHAR(MAX) NOT NULL,
+    [city] NVARCHAR(100) NOT NULL,
+    [state] NVARCHAR(100) NULL,
+    [postal_code] NVARCHAR(20) NOT NULL,
+    [country] NVARCHAR(100) NOT NULL,
+    [phone_number] NVARCHAR(20) NULL,
+    [is_default] BIT NOT NULL DEFAULT 0
+);
 
 -- Bảng Order (Quản lý đơn hàng)
 CREATE TABLE [dbo].[orders] (
@@ -164,6 +177,13 @@ CREATE TABLE [dbo].[reports] (
     [content] NVARCHAR(MAX) NOT NULL
 );
 
+CREATE TABLE [dbo].[report_data] (
+    [report_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[reports](report_id),
+    [data_type] NVARCHAR(50) NOT NULL, -- Sales, Inventory, Customers, etc.
+    [data_value] DECIMAL(18,2) NOT NULL,
+    [report_date] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
 -- Bảng FAQ 
 CREATE TABLE [dbo].[faq] (
     [faq_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -223,10 +243,12 @@ CREATE TABLE [dbo].[test_answers] (
 CREATE TABLE [dbo].[test_results] (
     [result_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [test_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_type_tests](test_id),
-    [question_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[test_questions](question_id),
-    [answer_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[test_answers](answer_id),
-    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D')),
-    [score] INT NOT NULL DEFAULT 0
+    [total_A] INT NOT NULL DEFAULT 0,  -- Số câu chọn A (Da dầu)
+    [total_B] INT NOT NULL DEFAULT 0,  -- Số câu chọn B (Da thường)
+    [total_C] INT NOT NULL DEFAULT 0,  -- Số câu chọn C (Da khô)
+    [total_D] INT NOT NULL DEFAULT 0,  -- Số câu chọn D (Da hỗn hợp)
+    [final_skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
 );
 
 -- Bảng chi tiết giao hàng (DeliveryDetails)
@@ -259,6 +281,15 @@ CREATE TABLE [dbo].[promotion_applications] (
     [order_id] INT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
     [applied_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [discount_amount] DECIMAL(18,2) NOT NULL DEFAULT 0
+);
+
+-- Bảng dùng để so sánh các sản phẩm với nhau
+CREATE TABLE [dbo].[product_comparisons] (
+    [comparison_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
+    [product1_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
+    [product2_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
+    [comparison_result] NVARCHAR(MAX) NULL -- Lưu kết quả so sánh
 );
 
 -- Bảng thuộc tính sản phẩm (ProductAttributes)
@@ -304,28 +335,4 @@ CREATE TABLE [dbo].[customer_points] (
     [order_id] INT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
     [earned_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
     [redeemed_date] DATETIME2 NULL
-);
-
-
--- Bảng chính sách hủy
-CREATE TABLE [dbo].[cancellation_policies] (
-    [policy_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [policy_name] NVARCHAR(255) NOT NULL,
-    [description] NVARCHAR(MAX) NULL,
-    [applicable_days] INT NOT NULL CHECK ([applicable_days] > 0), -- Số ngày áp dụng
-    [policy_type] NVARCHAR(50) NOT NULL DEFAULT 'Refund' -- Refund, Exchange, etc.
-);
-
-
--- Bảng địa chỉ giao hàng (ShippingAddresses)
-CREATE TABLE [dbo].[shipping_addresses] (
-    [address_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [address] NVARCHAR(MAX) NOT NULL,
-    [city] NVARCHAR(100) NOT NULL,
-    [state] NVARCHAR(100) NULL,
-    [postal_code] NVARCHAR(20) NOT NULL,
-    [country] NVARCHAR(100) NOT NULL,
-    [phone_number] NVARCHAR(20) NULL,
-    [is_default] BIT NOT NULL DEFAULT 0
 );
