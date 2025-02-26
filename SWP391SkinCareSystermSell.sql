@@ -3,6 +3,7 @@ DROP DATABASE IF EXISTS swp391skincaresellsystem;
 CREATE DATABASE swp391skincaresellsystem;
 USE swp391skincaresellsystem;
 
+--------------------------------------------------
 -- Bảng users (Quản lý thông tin người dùng)
 CREATE TABLE users (
     user_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -19,6 +20,7 @@ CREATE TABLE users (
     profile_image TEXT DEFAULT NULL
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng products (Quản lý sản phẩm)
 CREATE TABLE products (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,13 +35,15 @@ CREATE TABLE products (
     CHECK (stock_quantity >= 0)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng skin_types (Quản lý loại da)
 CREATE TABLE skin_types (
     skin_type_id INT AUTO_INCREMENT PRIMARY KEY,
     skin_type VARCHAR(50) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
 
--- Bảng skin_care_routines (Chăm sóc da)
+--------------------------------------------------
+-- Bảng skin_care_routines (Lộ trình chăm sóc da)
 CREATE TABLE skin_care_routines (
     routine_id INT AUTO_INCREMENT PRIMARY KEY,
     skin_type_id INT NOT NULL,
@@ -49,6 +53,7 @@ CREATE TABLE skin_care_routines (
     FOREIGN KEY (skin_type_id) REFERENCES skin_types(skin_type_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng user_details (Thông tin đặc thù theo vai trò)
 CREATE TABLE user_details (
     user_id BIGINT PRIMARY KEY,
@@ -63,6 +68,7 @@ CREATE TABLE user_details (
     FOREIGN KEY (preferred_skin_type_id) REFERENCES skin_types(skin_type_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng cancellation_policies (Chính sách hủy)
 CREATE TABLE cancellation_policies (
     policy_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,6 +79,7 @@ CREATE TABLE cancellation_policies (
     CHECK (applicable_days > 0)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng shipping_addresses (Địa chỉ giao hàng)
 CREATE TABLE shipping_addresses (
     address_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,6 +94,7 @@ CREATE TABLE shipping_addresses (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng orders (Đơn hàng)
 CREATE TABLE orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -104,6 +112,7 @@ CREATE TABLE orders (
     FOREIGN KEY (shipping_address_id) REFERENCES shipping_addresses(address_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng order_items (Chi tiết đơn hàng)
 CREATE TABLE order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -118,6 +127,7 @@ CREATE TABLE order_items (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng promotions (Khuyến mãi)
 CREATE TABLE promotions (
     promotion_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -132,6 +142,7 @@ CREATE TABLE promotions (
     CHECK (minimum_order_value IS NULL OR minimum_order_value >= 0)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng ratings_feedback (Đánh giá & phản hồi sản phẩm)
 CREATE TABLE ratings_feedback (
     feedback_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,6 +156,7 @@ CREATE TABLE ratings_feedback (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng carts (Giỏ hàng)
 CREATE TABLE carts (
     cart_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -152,6 +164,7 @@ CREATE TABLE carts (
     FOREIGN KEY (customer_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng cart_items (Chi tiết giỏ hàng)
 CREATE TABLE cart_items (
     cart_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -165,6 +178,7 @@ CREATE TABLE cart_items (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng blogs (Bài viết)
 CREATE TABLE blogs (
     blog_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,26 +192,7 @@ CREATE TABLE blogs (
     FOREIGN KEY (author_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB;
 
--- Bảng reports (Báo cáo)
-CREATE TABLE reports (
-    report_id INT AUTO_INCREMENT PRIMARY KEY,
-    manager_id BIGINT NOT NULL,
-    report_type VARCHAR(50) NOT NULL,
-    report_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    content TEXT NOT NULL,
-    FOREIGN KEY (manager_id) REFERENCES users(user_id)
-) ENGINE=InnoDB;
-
--- Bảng report_data (Dữ liệu báo cáo)
-CREATE TABLE report_data (
-    report_id INT NOT NULL,
-    data_type VARCHAR(50) NOT NULL,
-    data_value DECIMAL(18,2) NOT NULL,
-    report_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (report_id) REFERENCES reports(report_id)
-) ENGINE=InnoDB;
-
+--------------------------------------------------
 -- Bảng faq (Câu hỏi thường gặp)
 CREATE TABLE faq (
     faq_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -208,6 +203,7 @@ CREATE TABLE faq (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng payment_details (Chi tiết thanh toán)
 CREATE TABLE payment_details (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -220,6 +216,7 @@ CREATE TABLE payment_details (
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng order_history (Lịch sử đơn hàng)
 CREATE TABLE order_history (
     order_history_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -231,6 +228,7 @@ CREATE TABLE order_history (
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng skin_type_tests (Kiểm tra loại da)
 CREATE TABLE skin_type_tests (
     test_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -241,25 +239,7 @@ CREATE TABLE skin_type_tests (
     FOREIGN KEY (result_skin_type_id) REFERENCES skin_types(skin_type_id)
 ) ENGINE=InnoDB;
 
--- Bảng test_questions (Câu hỏi kiểm tra loại da)
-CREATE TABLE test_questions (
-    question_id INT AUTO_INCREMENT PRIMARY KEY,
-    question_text TEXT NOT NULL,
-    question_type VARCHAR(50) NOT NULL DEFAULT 'Single Choice'
-) ENGINE=InnoDB;
-
--- Bảng test_answers (Câu trả lời kiểm tra loại da)
-CREATE TABLE test_answers (
-    answer_id INT AUTO_INCREMENT PRIMARY KEY,
-    question_id INT NOT NULL,
-    answer_text TEXT NOT NULL,
-    option_label CHAR(1) NOT NULL,
-    skin_type_id INT NOT NULL,
-    CHECK (option_label IN ('A','B','C','D')),
-    FOREIGN KEY (question_id) REFERENCES test_questions(question_id),
-    FOREIGN KEY (skin_type_id) REFERENCES skin_types(skin_type_id)
-) ENGINE=InnoDB;
-
+--------------------------------------------------
 -- Bảng test_results (Kết quả kiểm tra loại da)
 CREATE TABLE test_results (
     result_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -274,6 +254,7 @@ CREATE TABLE test_results (
     FOREIGN KEY (final_skin_type_id) REFERENCES skin_types(skin_type_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng delivery_details (Chi tiết giao hàng)
 CREATE TABLE delivery_details (
     delivery_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -287,6 +268,7 @@ CREATE TABLE delivery_details (
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng inventory_logs (Nhật ký kho hàng)
 CREATE TABLE inventory_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -299,6 +281,7 @@ CREATE TABLE inventory_logs (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng promotion_applications (Áp dụng khuyến mãi)
 CREATE TABLE promotion_applications (
     application_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -312,6 +295,7 @@ CREATE TABLE promotion_applications (
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng product_comparisons (So sánh sản phẩm)
 CREATE TABLE product_comparisons (
     comparison_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -324,6 +308,7 @@ CREATE TABLE product_comparisons (
     FOREIGN KEY (product2_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng product_attributes (Thuộc tính sản phẩm)
 CREATE TABLE product_attributes (
     attribute_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -333,6 +318,7 @@ CREATE TABLE product_attributes (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng product_images (Hình ảnh sản phẩm)
 CREATE TABLE product_images (
     image_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -342,6 +328,7 @@ CREATE TABLE product_images (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng user_notifications (Thông báo người dùng)
 CREATE TABLE user_notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -353,6 +340,7 @@ CREATE TABLE user_notifications (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng recommended_products (Gợi ý sản phẩm theo loại da)
 CREATE TABLE recommended_products (
     recommendation_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -363,6 +351,7 @@ CREATE TABLE recommended_products (
     FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
 
+--------------------------------------------------
 -- Bảng customer_points (Điểm thưởng khách hàng)
 CREATE TABLE customer_points (
     point_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -375,4 +364,26 @@ CREATE TABLE customer_points (
     CHECK (points >= 0),
     FOREIGN KEY (customer_id) REFERENCES users(user_id),
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
+) ENGINE=InnoDB;
+
+--------------------------------------------------
+-- Tạo bảng sales_reports: lưu trữ báo cáo doanh số tổng hợp theo khoảng thời gian
+CREATE TABLE sales_reports (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    report_date DATE NOT NULL,  -- Ngày báo cáo
+    total_revenue DECIMAL(18,2) NOT NULL,
+    total_orders INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+--------------------------------------------------
+-- Tạo bảng sales_report_details: lưu trữ chi tiết doanh số theo sản phẩm trong báo cáo
+CREATE TABLE sales_report_details (
+    detail_id INT AUTO_INCREMENT PRIMARY KEY,
+    report_id INT NOT NULL,
+    product_id INT NOT NULL,
+    product_quantity INT NOT NULL,
+    product_revenue DECIMAL(18,2) NOT NULL,
+    FOREIGN KEY (report_id) REFERENCES sales_reports(report_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
 ) ENGINE=InnoDB;
