@@ -1,338 +1,378 @@
--- Xóa database cũ nếu có
-DROP DATABASE IF EXISTS SWP391SkinCareSellSystem;
-GO
+-- Xóa database nếu đã tồn tại và tạo lại
+DROP DATABASE IF EXISTS swp391skincaresellsystem;
+CREATE DATABASE swp391skincaresellsystem;
+USE swp391skincaresellsystem;
 
--- Tạo lại database
-CREATE DATABASE SWP391SkinCareSellSystem;
-GO
-
--- Sử dụng database mới
-USE SWP391SkinCareSellSystem;
-GO
-
--- Bảng Users (Quản lý thông tin người dùng)
-CREATE TABLE [dbo].[users] (
-    [user_id] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [user_name] NVARCHAR(255) NULL,
-    [email] NVARCHAR(255) NOT NULL UNIQUE,
-    [password_hash] NVARCHAR(MAX) NOT NULL,
-    [role] NVARCHAR(50) NOT NULL CHECK ([role] IN ('Customer', 'Staff', 'Manager')),
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [status] BIT NOT NULL DEFAULT 1, -- 1: Active, 0: Inactive
-    [gender] NVARCHAR(10) NULL, -- Male, Female
-    [date_of_birth] DATE NULL,
-    [address] NVARCHAR(MAX) NULL,
-    [phone_number] NVARCHAR(20) NULL,
-    [profile_image] NVARCHAR(MAX) NULL -- Đường dẫn ảnh đại diện
-);
+-- Bảng users (Quản lý thông tin người dùng)
+CREATE TABLE users (
+    user_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_name VARCHAR(255) DEFAULT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role ENUM('Customer','Staff','Manager') NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status BOOLEAN NOT NULL DEFAULT 1, -- 1: Active, 0: Inactive
+    gender ENUM('Male','Female') DEFAULT NULL,
+    date_of_birth DATE DEFAULT NULL,
+    address TEXT DEFAULT NULL,
+    phone_number VARCHAR(20) DEFAULT NULL,
+    profile_image TEXT DEFAULT NULL
+) ENGINE=InnoDB;
 
 -- Bảng products (Quản lý sản phẩm)
-CREATE TABLE [dbo].[products] (
-    [product_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [product_name] NVARCHAR(255) NOT NULL,
-    [description] NVARCHAR(MAX) NULL,
-    [category] NVARCHAR(50) NOT NULL,
-    [price] DECIMAL(18, 2) NOT NULL,
-    [stock_quantity] INT NOT NULL CHECK ([stock_quantity] >= 0),
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [updated_at] DATETIME2 NULL,
-    [status] NVARCHAR(50) NOT NULL DEFAULT 'Available' -- Available, OutOfStock, Discontinued
-);
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    category VARCHAR(50) NOT NULL,
+    price DECIMAL(18,2) NOT NULL,
+    stock_quantity INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT NULL,
+    status ENUM('Available','OutOfStock','Discontinued') NOT NULL DEFAULT 'Available',
+    CHECK (stock_quantity >= 0)
+) ENGINE=InnoDB;
 
--- Bảng loại da (Quản lý loại da)
-CREATE TABLE [dbo].[skin_types] (
-    [skin_type_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [skin_type] NVARCHAR(50) NOT NULL UNIQUE -- Da dầu, Da hỗn hợp, Da khô, Da thường
-);
+-- Bảng skin_types (Quản lý loại da)
+CREATE TABLE skin_types (
+    skin_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    skin_type VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB;
 
--- Bảng quy trình SkinCareRoutines (Chăm sóc da)
-CREATE TABLE [dbo].[skin_care_routines] (
-    [routine_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
-    [step_number] INT NOT NULL CHECK ([step_number] > 0),
-    [description] NVARCHAR(MAX) NOT NULL
-);
+-- Bảng skin_care_routines (Chăm sóc da)
+CREATE TABLE skin_care_routines (
+    routine_id INT AUTO_INCREMENT PRIMARY KEY,
+    skin_type_id INT NOT NULL,
+    step_number INT NOT NULL,
+    description TEXT NOT NULL,
+    CHECK (step_number > 0),
+    FOREIGN KEY (skin_type_id) REFERENCES skin_types(skin_type_id)
+) ENGINE=InnoDB;
 
--- Bảng tip chăm sóc da mặt
-CREATE TABLE [dbo].[skin_care_tips] (
-    [tip_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [tip_text] NVARCHAR(MAX) NOT NULL,
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
-);
-
--- Bảng chi tiết người dùng (Lưu thông tin đặc thù theo vai trò)
+-- Bảng user_details (Thông tin đặc thù theo vai trò)
 CREATE TABLE user_details (
-    [user_id] BIGINT PRIMARY KEY FOREIGN KEY REFERENCES users(user_id),
-    [loyalty_points] INT NULL CHECK ([loyalty_points] >= 0), -- Dành cho Customer
-    [preferred_skin_type_id] INT NULL FOREIGN KEY REFERENCES skin_types(skin_type_id),
-    [hire_date] DATE NULL, -- Dành cho Staff
-    [salary] DECIMAL(18,2) NULL CHECK (salary >= 0), -- Dành cho Staff
-    [department] NVARCHAR(255) NULL -- Dành cho Manager
-);
+    user_id BIGINT PRIMARY KEY,
+    loyalty_points INT DEFAULT NULL,
+    preferred_skin_type_id INT DEFAULT NULL,
+    hire_date DATE DEFAULT NULL,
+    salary DECIMAL(18,2) DEFAULT NULL,
+    department VARCHAR(255) DEFAULT NULL,
+    CHECK (loyalty_points IS NULL OR loyalty_points >= 0),
+    CHECK (salary IS NULL OR salary >= 0),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (preferred_skin_type_id) REFERENCES skin_types(skin_type_id)
+) ENGINE=InnoDB;
 
--- Bảng chính sách hủy
-CREATE TABLE [dbo].[cancellation_policies] (
-    [policy_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [policy_name] NVARCHAR(255) NOT NULL,
-    [description] NVARCHAR(MAX) NULL,
-    [applicable_days] INT NOT NULL CHECK ([applicable_days] > 0), -- Số ngày áp dụng
-    [policy_type] NVARCHAR(50) NOT NULL DEFAULT 'Refund' -- Refund, Exchange, etc.
-);
+-- Bảng cancellation_policies (Chính sách hủy)
+CREATE TABLE cancellation_policies (
+    policy_id INT AUTO_INCREMENT PRIMARY KEY,
+    policy_name VARCHAR(255) NOT NULL,
+    description TEXT DEFAULT NULL,
+    applicable_days INT NOT NULL,
+    policy_type VARCHAR(50) NOT NULL DEFAULT 'Refund',
+    CHECK (applicable_days > 0)
+) ENGINE=InnoDB;
 
--- Bảng địa chỉ giao hàng (ShippingAddresses)
-CREATE TABLE [dbo].[shipping_addresses] (
-    [address_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [address] NVARCHAR(MAX) NOT NULL,
-    [city] NVARCHAR(100) NOT NULL,
-    [state] NVARCHAR(100) NULL,
-    [postal_code] NVARCHAR(20) NOT NULL,
-    [country] NVARCHAR(100) NOT NULL,
-    [phone_number] NVARCHAR(20) NULL,
-    [is_default] BIT NOT NULL DEFAULT 0
-);
+-- Bảng shipping_addresses (Địa chỉ giao hàng)
+CREATE TABLE shipping_addresses (
+    address_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    address TEXT NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) DEFAULT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    phone_number VARCHAR(20) DEFAULT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB;
 
--- Bảng Order (Quản lý đơn hàng)
-CREATE TABLE [dbo].[orders] (
-    [order_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [total_price] DECIMAL(18, 2) NOT NULL CHECK ([total_price] >= 0),
-    [order_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending' 
-        CHECK ([order_status] IN ('Pending', 'Shipped', 'Delivered', 'Canceled')), -- Tránh trạng thái sai
-    [policy_id] INT NULL FOREIGN KEY REFERENCES [dbo].[cancellation_policies](policy_id),
-    [shipping_address_id] INT NULL FOREIGN KEY REFERENCES [dbo].[shipping_addresses](address_id) 
-        ON DELETE SET NULL, -- Địa chỉ bị xóa sẽ đặt về NULL
-    [discount_amount] DECIMAL(18,2) NOT NULL DEFAULT 0, 
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [updated_at] DATETIME2 NULL
-);
+-- Bảng orders (Đơn hàng)
+CREATE TABLE orders (
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    total_price DECIMAL(18,2) NOT NULL,
+    order_status ENUM('Pending','Shipped','Delivered','Canceled') NOT NULL DEFAULT 'Pending',
+    policy_id INT DEFAULT NULL,
+    shipping_address_id INT DEFAULT NULL,
+    discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT NULL,
+    CHECK (total_price >= 0),
+    FOREIGN KEY (customer_id) REFERENCES users(user_id),
+    FOREIGN KEY (policy_id) REFERENCES cancellation_policies(policy_id),
+    FOREIGN KEY (shipping_address_id) REFERENCES shipping_addresses(address_id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
--- Bảng chi tiết đơn hàng (OrderItems)
-CREATE TABLE [dbo].[order_items] (
-    [order_item_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
-        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa luôn các sản phẩm liên quan
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [quantity] INT NOT NULL CHECK ([quantity] > 0),
-    [unit_price] DECIMAL(18, 2) NOT NULL CHECK ([unit_price] >= 0),
-    [discount_amount] DECIMAL(18,2) NOT NULL DEFAULT 0
-);
+-- Bảng order_items (Chi tiết đơn hàng)
+CREATE TABLE order_items (
+    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(18,2) NOT NULL,
+    discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    CHECK (quantity > 0),
+    CHECK (unit_price >= 0),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng khuyến mãi (Promotions)
-CREATE TABLE [dbo].[promotions] (
-    [promotion_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [code] NVARCHAR(50) NOT NULL UNIQUE,
-    [description] NVARCHAR(MAX) NULL,
-    [discount_percentage] DECIMAL(5, 2) NOT NULL CHECK ([discount_percentage] BETWEEN 0 AND 100),
-    [start_date] DATETIME NOT NULL,
-    [end_date] DATETIME NOT NULL,
-    [minimum_order_value] DECIMAL(18, 2) NULL CHECK ([minimum_order_value] >= 0),
-    [status] NVARCHAR(50) NOT NULL DEFAULT 'Active' -- Active, Expired
-);
+-- Bảng promotions (Khuyến mãi)
+CREATE TABLE promotions (
+    promotion_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT DEFAULT NULL,
+    discount_percentage DECIMAL(5,2) NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    minimum_order_value DECIMAL(18,2) DEFAULT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Active',
+    CHECK (discount_percentage BETWEEN 0 AND 100),
+    CHECK (minimum_order_value IS NULL OR minimum_order_value >= 0)
+) ENGINE=InnoDB;
 
--- Bảng đánh giá & phản hồi sản phẩm (Ratings & Feedback)
-CREATE TABLE [dbo].[ratings_feedback] (
-    [feedback_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [rating] INT NOT NULL CHECK ([rating] BETWEEN 1 AND 5),
-    [comment] NVARCHAR(MAX) NULL,
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng ratings_feedback (Đánh giá & phản hồi sản phẩm)
+CREATE TABLE ratings_feedback (
+    feedback_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    product_id INT NOT NULL,
+    rating INT NOT NULL,
+    comment TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (rating BETWEEN 1 AND 5),
+    FOREIGN KEY (customer_id) REFERENCES users(user_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng giỏ hàng (Carts)
-CREATE TABLE [dbo].[carts] (
-    [cart_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL UNIQUE FOREIGN KEY REFERENCES [dbo].[users](user_id)
-);
+-- Bảng carts (Giỏ hàng)
+CREATE TABLE carts (
+    cart_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL UNIQUE,
+    FOREIGN KEY (customer_id) REFERENCES users(user_id)
+) ENGINE=InnoDB;
 
--- Bảng chi tiết giỏ hàng (CartItems)
-CREATE TABLE [dbo].[cart_items] (
-    [cart_item_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [cart_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[carts](cart_id),
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [quantity] INT NOT NULL CHECK ([quantity] > 0),
-    [original_price] DECIMAL(18, 2) NOT NULL CHECK ([original_price] >= 0)
-);
+-- Bảng cart_items (Chi tiết giỏ hàng)
+CREATE TABLE cart_items (
+    cart_item_id INT AUTO_INCREMENT PRIMARY KEY,
+    cart_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    original_price DECIMAL(18,2) NOT NULL,
+    CHECK (quantity > 0),
+    CHECK (original_price >= 0),
+    FOREIGN KEY (cart_id) REFERENCES carts(cart_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng blog (Quản lý bài viết)
-CREATE TABLE [dbo].[blogs] (
-    [blog_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [title] NVARCHAR(255) NOT NULL,
-    [content] NVARCHAR(MAX) NOT NULL,
-    [author_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [category] NVARCHAR(50) NULL,
-    [view_count] INT NOT NULL DEFAULT 0,
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [updated_at] DATETIME2 NULL
-);
+-- Bảng blogs (Bài viết)
+CREATE TABLE blogs (
+    blog_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    author_id BIGINT NOT NULL,
+    category VARCHAR(50) DEFAULT NULL,
+    view_count INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (author_id) REFERENCES users(user_id)
+) ENGINE=InnoDB;
 
--- Bảng báo cáo (Reports)
-CREATE TABLE [dbo].[reports] (
-    [report_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [manager_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [report_type] NVARCHAR(50) NOT NULL, -- Sales, Inventory, Customer
-    [report_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Completed
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [content] NVARCHAR(MAX) NOT NULL
-);
+-- Bảng reports (Báo cáo)
+CREATE TABLE reports (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    manager_id BIGINT NOT NULL,
+    report_type VARCHAR(50) NOT NULL,
+    report_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    content TEXT NOT NULL,
+    FOREIGN KEY (manager_id) REFERENCES users(user_id)
+) ENGINE=InnoDB;
 
-CREATE TABLE [dbo].[report_data] (
-    [report_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[reports](report_id),
-    [data_type] NVARCHAR(50) NOT NULL, -- Sales, Inventory, Customers, etc.
-    [data_value] DECIMAL(18,2) NOT NULL,
-    [report_date] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng report_data (Dữ liệu báo cáo)
+CREATE TABLE report_data (
+    report_id INT NOT NULL,
+    data_type VARCHAR(50) NOT NULL,
+    data_value DECIMAL(18,2) NOT NULL,
+    report_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (report_id) REFERENCES reports(report_id)
+) ENGINE=InnoDB;
 
--- Bảng FAQ 
-CREATE TABLE [dbo].[faq] (
-    [faq_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [product_id] INT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [question] NVARCHAR(MAX) NOT NULL,
-    [answer] NVARCHAR(MAX) NULL,
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng faq (Câu hỏi thường gặp)
+CREATE TABLE faq (
+    faq_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT DEFAULT NULL,
+    question TEXT NOT NULL,
+    answer TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng chi tiết thanh toán (PaymentDetails)
-CREATE TABLE [dbo].[payment_details] (
-    [payment_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
-        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa cả thông tin thanh toán
-    [payment_method] NVARCHAR(50) NOT NULL,
-    [payment_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending' 
-        CHECK ([payment_status] IN ('Pending', 'Completed', 'Failed', 'Refunded')),
-    [payment_date] DATETIME2 NULL,
-    [transaction_id] NVARCHAR(255) NULL
-);
+-- Bảng payment_details (Chi tiết thanh toán)
+CREATE TABLE payment_details (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    payment_date DATETIME DEFAULT NULL,
+    transaction_id VARCHAR(255) DEFAULT NULL,
+    CHECK (payment_status IN ('Pending','Completed','Failed','Refunded')),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Bảng lịch sử đơn hàng (OrderHistory)
-CREATE TABLE [dbo].[order_history] (
-    [order_history_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id) 
-        ON DELETE CASCADE, -- Khi xóa đơn hàng, xóa lịch sử của đơn hàng đó
-    [status] NVARCHAR(50) NOT NULL CHECK ([status] IN ('Pending', 'Shipped', 'Delivered', 'Canceled')),
-    [note] NVARCHAR(MAX) NULL,
-    [update_time] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng order_history (Lịch sử đơn hàng)
+CREATE TABLE order_history (
+    order_history_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    note TEXT DEFAULT NULL,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (status IN ('Pending','Shipped','Delivered','Canceled')),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Bảng kiểm tra loại da (SkinTypeTests)
-CREATE TABLE [dbo].[skin_type_tests] (
-    [test_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [test_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [result_skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
-);
+-- Bảng skin_type_tests (Kiểm tra loại da)
+CREATE TABLE skin_type_tests (
+    test_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    test_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    result_skin_type_id INT NOT NULL,
+    FOREIGN KEY (customer_id) REFERENCES users(user_id),
+    FOREIGN KEY (result_skin_type_id) REFERENCES skin_types(skin_type_id)
+) ENGINE=InnoDB;
 
--- Bảng câu hỏi kiểm tra loại da (TestQuestions)
-CREATE TABLE [dbo].[test_questions] (
-    [question_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [question_text] NVARCHAR(MAX) NOT NULL,
-    [question_type] NVARCHAR(50) NOT NULL DEFAULT 'Single Choice' -- Single Choice, Multiple Choice
-);
+-- Bảng test_questions (Câu hỏi kiểm tra loại da)
+CREATE TABLE test_questions (
+    question_id INT AUTO_INCREMENT PRIMARY KEY,
+    question_text TEXT NOT NULL,
+    question_type VARCHAR(50) NOT NULL DEFAULT 'Single Choice'
+) ENGINE=InnoDB;
 
--- Bảng câu trả lời kiểm tra loại da (TestAnswers)
-CREATE TABLE [dbo].[test_answers] (
-    [answer_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [question_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[test_questions](question_id),
-    [answer_text] NVARCHAR(MAX) NOT NULL,
-    [option_label] NVARCHAR(1) NOT NULL CHECK ([option_label] IN ('A', 'B', 'C', 'D')),
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id)
-);
+-- Bảng test_answers (Câu trả lời kiểm tra loại da)
+CREATE TABLE test_answers (
+    answer_id INT AUTO_INCREMENT PRIMARY KEY,
+    question_id INT NOT NULL,
+    answer_text TEXT NOT NULL,
+    option_label CHAR(1) NOT NULL,
+    skin_type_id INT NOT NULL,
+    CHECK (option_label IN ('A','B','C','D')),
+    FOREIGN KEY (question_id) REFERENCES test_questions(question_id),
+    FOREIGN KEY (skin_type_id) REFERENCES skin_types(skin_type_id)
+) ENGINE=InnoDB;
 
--- Bảng kết quả kiểm tra loại da (TestResults)
-CREATE TABLE [dbo].[test_results] (
-    [result_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [test_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_type_tests](test_id),
-    [total_A] INT NOT NULL DEFAULT 0,  -- Số câu chọn A (Da dầu)
-    [total_B] INT NOT NULL DEFAULT 0,  -- Số câu chọn B (Da thường)
-    [total_C] INT NOT NULL DEFAULT 0,  -- Số câu chọn C (Da khô)
-    [total_D] INT NOT NULL DEFAULT 0,  -- Số câu chọn D (Da hỗn hợp)
-    [final_skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng test_results (Kết quả kiểm tra loại da)
+CREATE TABLE test_results (
+    result_id INT AUTO_INCREMENT PRIMARY KEY,
+    test_id INT NOT NULL,
+    total_A INT NOT NULL DEFAULT 0,
+    total_B INT NOT NULL DEFAULT 0,
+    total_C INT NOT NULL DEFAULT 0,
+    total_D INT NOT NULL DEFAULT 0,
+    final_skin_type_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (test_id) REFERENCES skin_type_tests(test_id),
+    FOREIGN KEY (final_skin_type_id) REFERENCES skin_types(skin_type_id)
+) ENGINE=InnoDB;
 
--- Bảng chi tiết giao hàng (DeliveryDetails)
-CREATE TABLE [dbo].[delivery_details] (
-    [delivery_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [order_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
-    [delivery_status] NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Shipped, Delivered
-    [courier_name] NVARCHAR(255) NULL,
-    [tracking_number] NVARCHAR(255) NULL,
-    [delivery_date] DATETIME2 NULL,
-    [estimated_delivery_date] DATETIME2 NULL, -- Ngày giao hàng dự kiến
-    [delivered_date] DATETIME2 NULL -- Ngày giao hàng thành công
-);
+-- Bảng delivery_details (Chi tiết giao hàng)
+CREATE TABLE delivery_details (
+    delivery_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    delivery_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    courier_name VARCHAR(255) DEFAULT NULL,
+    tracking_number VARCHAR(255) DEFAULT NULL,
+    delivery_date DATETIME DEFAULT NULL,
+    estimated_delivery_date DATETIME DEFAULT NULL,
+    delivered_date DATETIME DEFAULT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+) ENGINE=InnoDB;
 
--- Bảng nhật ký kho hàng (InventoryLogs)
-CREATE TABLE [dbo].[inventory_logs] (
-    [log_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [quantity_change] INT NOT NULL,
-    [log_type] NVARCHAR(50) NOT NULL CHECK ([log_type] IN ('Stock-In', 'Stock-Out', 'Restock')),
-    [log_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [reason] NVARCHAR(MAX) NULL
-);
+-- Bảng inventory_logs (Nhật ký kho hàng)
+CREATE TABLE inventory_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    quantity_change INT NOT NULL,
+    log_type VARCHAR(50) NOT NULL,
+    log_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reason TEXT DEFAULT NULL,
+    CHECK (log_type IN ('Stock-In','Stock-Out','Restock')),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng áp dụng khuyến mãi (PromotionApplications)
-CREATE TABLE [dbo].[promotion_applications] (
-    [application_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [promotion_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[promotions](promotion_id),
-    [product_id] INT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [order_id] INT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
-    [applied_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [discount_amount] DECIMAL(18,2) NOT NULL DEFAULT 0
-);
+-- Bảng promotion_applications (Áp dụng khuyến mãi)
+CREATE TABLE promotion_applications (
+    application_id INT AUTO_INCREMENT PRIMARY KEY,
+    promotion_id INT NOT NULL,
+    product_id INT DEFAULT NULL,
+    order_id INT DEFAULT NULL,
+    applied_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    discount_amount DECIMAL(18,2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+) ENGINE=InnoDB;
 
--- Bảng dùng để so sánh các sản phẩm với nhau
-CREATE TABLE [dbo].[product_comparisons] (
-    [comparison_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [product1_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [product2_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [comparison_result] NVARCHAR(MAX) NULL -- Lưu kết quả so sánh
-);
+-- Bảng product_comparisons (So sánh sản phẩm)
+CREATE TABLE product_comparisons (
+    comparison_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product1_id INT NOT NULL,
+    product2_id INT NOT NULL,
+    comparison_result TEXT DEFAULT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (product1_id) REFERENCES products(product_id),
+    FOREIGN KEY (product2_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng thuộc tính sản phẩm (ProductAttributes)
-CREATE TABLE [dbo].[product_attributes] (
-    [attribute_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [attribute_name] NVARCHAR(255) NOT NULL,
-    [attribute_value] NVARCHAR(255) NOT NULL
-);
+-- Bảng product_attributes (Thuộc tính sản phẩm)
+CREATE TABLE product_attributes (
+    attribute_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    attribute_name VARCHAR(255) NOT NULL,
+    attribute_value VARCHAR(255) NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng hình ảnh sản phẩm (ProductImages)
-CREATE TABLE [dbo].[product_images] (
-    [image_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [image_url] NVARCHAR(MAX) NOT NULL,
-    [is_main_image] BIT NOT NULL DEFAULT 0
-);
+-- Bảng product_images (Hình ảnh sản phẩm)
+CREATE TABLE product_images (
+    image_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    image_url TEXT NOT NULL,
+    is_main_image BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng thông báo người dùng (UserNotifications)
-CREATE TABLE [dbo].[user_notifications] (
-    [notification_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [user_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [message] NVARCHAR(MAX) NOT NULL,
-    [notification_type] NVARCHAR(50) NOT NULL DEFAULT 'General', -- Order Update, Promotion, etc.
-    [status] NVARCHAR(50) NOT NULL DEFAULT 'Unread',
-    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
-);
+-- Bảng user_notifications (Thông báo người dùng)
+CREATE TABLE user_notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    message TEXT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL DEFAULT 'General',
+    status VARCHAR(50) NOT NULL DEFAULT 'Unread',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB;
 
--- Bảng gợi ý sản phẩm theo loại da (ProductRecommendations)
-CREATE TABLE [dbo].[recommended_products] (
-    [recommendation_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [skin_type_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[skin_types](skin_type_id),
-    [product_id] INT NOT NULL FOREIGN KEY REFERENCES [dbo].[products](product_id),
-    [recommendation_reason] NVARCHAR(255) NULL -- Best Seller, User Rating, etc.
-);
+-- Bảng recommended_products (Gợi ý sản phẩm theo loại da)
+CREATE TABLE recommended_products (
+    recommendation_id INT AUTO_INCREMENT PRIMARY KEY,
+    skin_type_id INT NOT NULL,
+    product_id INT NOT NULL,
+    recommendation_reason VARCHAR(255) DEFAULT NULL,
+    FOREIGN KEY (skin_type_id) REFERENCES skin_types(skin_type_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+) ENGINE=InnoDB;
 
--- Bảng điểm thưởng khách hàng (CustomerPoints)
-CREATE TABLE [dbo].[customer_points] (
-    [point_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [customer_id] BIGINT NOT NULL FOREIGN KEY REFERENCES [dbo].[users](user_id),
-    [points] INT NOT NULL CHECK ([points] >= 0),
-    [point_type] NVARCHAR(50) NOT NULL DEFAULT 'Earned', -- Earned, Redeemed
-    [order_id] INT NULL FOREIGN KEY REFERENCES [dbo].[orders](order_id),
-    [earned_date] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    [redeemed_date] DATETIME2 NULL
-);
+-- Bảng customer_points (Điểm thưởng khách hàng)
+CREATE TABLE customer_points (
+    point_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    points INT NOT NULL,
+    point_type VARCHAR(50) NOT NULL DEFAULT 'Earned',
+    order_id INT DEFAULT NULL,
+    earned_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    redeemed_date DATETIME DEFAULT NULL,
+    CHECK (points >= 0),
+    FOREIGN KEY (customer_id) REFERENCES users(user_id),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+) ENGINE=InnoDB;
